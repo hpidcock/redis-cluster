@@ -52,6 +52,19 @@ spec:
       labels:
         app: redis-cluster
     spec:
+      terminationGracePeriodSeconds: 60
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - redis-cluster
+              topologyKey: kubernetes.io/hostname
       containers:
       - name: redis-cluster
         image: hpidcock/redis-cluster
@@ -101,19 +114,6 @@ spec:
             path: redis.conf
   updateStrategy:
     type: RollingUpdate
-  terminationGracePeriodSeconds: 60
-  affinity:
-    podAntiAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
-      - weight: 100
-        podAffinityTerm:
-          labelSelector:
-            matchExpressions:
-            - key: app
-              operator: In
-              values:
-              - redis-cluster
-          topologyKey: kubernetes.io/hostname
   volumeClaimTemplates:
   - metadata:
       name: data
