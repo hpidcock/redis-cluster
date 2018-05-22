@@ -14,6 +14,9 @@ data:
     cluster-migration-barrier 1
     appendonly yes
     protected-mode no
+    dir /data/
+    maxmemory-policy volatile-lfu
+    maxmemory 1024mb
 ---
 apiVersion: v1
 kind: Service
@@ -51,7 +54,7 @@ spec:
     spec:
       containers:
       - name: redis-cluster
-        image: redis-cluster:v1
+        image: hpidcock/redis-cluster
         ports:
         - containerPort: 6379
           name: client
@@ -82,6 +85,13 @@ spec:
         - name: data
           mountPath: /data
           readOnly: false
+        resources:
+          limits:
+            memory: 1024Mi
+            cpu: 500m
+          requests:
+            memory: 1024Mi
+            cpu: 500m
       volumes:
       - name: conf
         configMap:
@@ -89,15 +99,52 @@ spec:
           items: 
           - key: redis.conf
             path: redis.conf
+  updateStrategy:
+    type: RollingUpdate
+  terminationGracePeriodSeconds: 60
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - redis-cluster
+          topologyKey: kubernetes.io/hostname
   volumeClaimTemplates:
   - metadata:
       name: data
-      labels:
-        name: redis-cluster
-      annotations:
-        volume.alpha.kubernetes.io/storage-class: anything
     spec:
-      accessModes: [ "ReadWriteOnce" ]
+      accessModes:
+        - "ReadWriteOnce"
+      storageClassName: ssd
+      selector:
+        matchLabels:
+          app: redis-cluster
       resources:
         requests:
-          storage: 100Mi
+          storage: 10Gi
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: redis-cluster-budget
+  labels:
+    app: redis-cluster
+spec:
+  selector:
+    matchLabels:
+      app: redis-cluster
+  maxUnavailable: 1
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ssd
+parameters:
+  type: pd-ssd
+provisioner: kubernetes.io/gce-pd
+reclaimPolicy: Delete
