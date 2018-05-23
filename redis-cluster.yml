@@ -121,9 +121,6 @@ spec:
       accessModes:
         - "ReadWriteOnce"
       storageClassName: ssd
-      selector:
-        matchLabels:
-          app: redis-cluster
       resources:
         requests:
           storage: 10Gi
