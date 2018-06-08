@@ -1,4 +1,4 @@
-FROM redis:4
+FROM hpidcock/redis:5.0
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get -y update \
   && apt-get -y upgrade \
